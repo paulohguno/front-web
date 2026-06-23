@@ -1,109 +1,77 @@
 // =========================================================
-// RODA & SABOR — Componente: Roleta SVG
-// Peça de assinatura: desenha fatias proporcionais ao peso
-// de cada prêmio e anima a rotação até o resultado do sorteio.
+// RODA & SABOR — Componente: Roleta SVG (v2 — 10 fatias)
 // =========================================================
 
-const PALETA_FATIAS = ['#d4af37', '#151310', '#8a7a4f', '#1c1814', '#f2d680', '#0b0a08'];
+const PALETA = ['#2a2218','#1c1814','#8a7a4f','#d4af37','#b8960c','#c9a227','#4a7c59','#f2d680','#e8c547','#ff9d00'];
 
-function polarParaCartesiano(cx, cy, raio, anguloGraus) {
-  const anguloRad = ((anguloGraus - 90) * Math.PI) / 180;
-  return { x: cx + raio * Math.cos(anguloRad), y: cy + raio * Math.sin(anguloRad) };
+function polar(cx, cy, r, deg) {
+  const rad = ((deg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function caminhoFatia(cx, cy, raio, anguloInicial, anguloFinal) {
-  const p1 = polarParaCartesiano(cx, cy, raio, anguloFinal);
-  const p2 = polarParaCartesiano(cx, cy, raio, anguloInicial);
-  const largeArc = anguloFinal - anguloInicial <= 180 ? '0' : '1';
-  return `M ${cx} ${cy} L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} A ${raio} ${raio} 0 ${largeArc} 0 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)} Z`;
+function fatiaPath(cx, cy, r, a1, a2) {
+  const p1 = polar(cx, cy, r, a2);
+  const p2 = polar(cx, cy, r, a1);
+  const large = a2 - a1 <= 180 ? '0' : '1';
+  return `M${cx} ${cy}L${p1.x.toFixed(2)} ${p1.y.toFixed(2)}A${r} ${r} 0 ${large} 0 ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}Z`;
 }
 
-/**
- * Monta o SVG da roleta a partir da lista de prêmios.
- * Cada prêmio tem peso = probabilidadeVitoria (relativo).
- */
+function luminosidade(hex) {
+  const h = (hex||'').replace('#','');
+  if (h.length < 6) return 0;
+  const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+  return (0.299*r + 0.587*g + 0.114*b) / 255;
+}
+
+function esc(t) { return String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
 export function montarRoletaSvg(premios) {
-  const tamanho = 400;
-  const cx = tamanho / 2;
-  const cy = tamanho / 2;
-  const raio = tamanho / 2 - 6;
+  const SZ = 400, cx = SZ/2, cy = SZ/2, r = SZ/2 - 5;
 
-  const pesos = premios.map((p) => Math.max(Number(p.probabilidade_vitoria ?? p.probabilidadeVitoria) || 0, 0.0001));
-  const totalPeso = pesos.reduce((s, p) => s + p, 0);
+  const pesos = premios.map(p => Math.max(Number(p.probabilidade_vitoria ?? p.probabilidadeVitoria) || 0, 0.001));
+  const total = pesos.reduce((s,p) => s+p, 0);
 
-  let anguloAcumulado = 0;
+  let ang = 0;
   const fatiasInfo = [];
-  let fatiasSvg = '';
+  let paths = '';
 
-  premios.forEach((premio, indice) => {
-    const fatiaAngulo = (pesos[indice] / totalPeso) * 360;
-    const anguloInicial = anguloAcumulado;
-    const anguloFinal = anguloAcumulado + fatiaAngulo;
-    const anguloMeio = anguloInicial + fatiaAngulo / 2;
-    const cor = premio.color || premio.cor || PALETA_FATIAS[indice % PALETA_FATIAS.length];
+  premios.forEach((premio, i) => {
+    const span = (pesos[i]/total) * 360;
+    const a1 = ang, a2 = ang + span, meio = ang + span/2;
+    const cor = premio.cor || premio.color || PALETA[i % PALETA.length];
+    fatiasInfo.push({ ...premio, anguloInicial:a1, anguloFinal:a2, anguloMeio:meio });
 
-    fatiasInfo.push({ ...premio, anguloInicial, anguloFinal, anguloMeio });
+    const corTxt = luminosidade(cor) > 0.55 ? '#15130f' : '#f5efe0';
+    const pos = polar(cx, cy, r * 0.60, meio);
 
-    const corTexto = corLuminosidadeClara(cor) ? '#15130f' : '#f5efe0';
-    const posTexto = polarParaCartesiano(cx, cy, raio * 0.62, anguloMeio);
-    const rotuloCurto = (premio.label || premio.nome || '').slice(0, 16);
+    // Texto em duas linhas se for longo
+    const rotulo = (premio.label || premio.nome || '').slice(0, 14);
+    const fontSize = rotulo.length > 8 ? 10 : 12;
 
-    fatiasSvg += `
-      <path d="${caminhoFatia(cx, cy, raio, anguloInicial, anguloFinal)}" fill="${cor}" stroke="#0b0a08" stroke-width="1.5" />
-      <text x="${posTexto.x.toFixed(2)}" y="${posTexto.y.toFixed(2)}" fill="${corTexto}" font-size="13" font-weight="700" font-family="Inter, sans-serif" text-anchor="middle" dominant-baseline="middle" transform="rotate(${anguloMeio}, ${posTexto.x.toFixed(2)}, ${posTexto.y.toFixed(2)})">${escaparTextoSvg(rotuloCurto)}</text>
-    `;
-
-    anguloAcumulado = anguloFinal;
+    paths += `
+      <path d="${fatiaPath(cx,cy,r,a1,a2)}" fill="${cor}" stroke="#0b0a08" stroke-width="1.2"/>
+      <text x="${pos.x.toFixed(2)}" y="${pos.y.toFixed(2)}"
+        fill="${corTxt}" font-size="${fontSize}" font-weight="700" font-family="Inter,sans-serif"
+        text-anchor="middle" dominant-baseline="middle"
+        transform="rotate(${meio},${pos.x.toFixed(2)},${pos.y.toFixed(2)})">${esc(rotulo)}</text>`;
+    ang = a2;
   });
 
-  const svg = `
-    <svg class="roleta-disco" viewBox="0 0 ${tamanho} ${tamanho}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Roleta de prêmios">
-      <circle cx="${cx}" cy="${cy}" r="${raio}" fill="#151310" />
-      ${fatiasSvg}
-      <circle cx="${cx}" cy="${cy}" r="${raio}" fill="none" stroke="#34291a" stroke-width="1" />
-    </svg>
-  `;
+  const svg = `<svg class="roleta-disco" viewBox="0 0 ${SZ} ${SZ}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Roleta de prêmios">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="#151310"/>
+    ${paths}
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#34291a" stroke-width="1"/>
+  </svg>`;
 
   return { svg, fatiasInfo };
 }
 
-function corLuminosidadeClara(hex) {
-  if (!hex || !hex.startsWith('#')) return false;
-  const limpo = hex.replace('#', '');
-  const valor = limpo.length === 3
-    ? limpo.split('').map((c) => c + c).join('')
-    : limpo;
-  if (valor.length !== 6) return false;
-  const r = parseInt(valor.slice(0, 2), 16);
-  const g = parseInt(valor.slice(2, 4), 16);
-  const b = parseInt(valor.slice(4, 6), 16);
-  const luminosidade = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminosidade > 0.6;
-}
-
-function escaparTextoSvg(texto) {
-  return String(texto)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-/**
- * Calcula o ângulo final de rotação para que o ponteiro (fixo no topo, 0°)
- * pare exatamente sobre a fatia do prêmio vencedor, com voltas extras para efeito.
- */
-export function calcularAnguloParada(fatiasInfo, premioVencedorId, rotacaoAtual) {
-  const fatia = premioVencedorId
-    ? fatiasInfo.find((f) => f.id === premioVencedorId)
-    : null;
-
-  const anguloAlvo = fatia ? fatia.anguloMeio : (fatiasInfo[0]?.anguloMeio || 0);
-
-  const voltasExtras = 5 + Math.floor(Math.random() * 2); // 5-6 voltas
+export function calcularAnguloParada(fatiasInfo, premioId, rotacaoAtual) {
+  const fatia = premioId ? fatiasInfo.find(f => f.id === premioId) : null;
+  const alvo = fatia ? fatia.anguloMeio : (fatiasInfo[0]?.anguloMeio || 0);
+  const voltas = 5 + Math.floor(Math.random() * 2);
   const offsetAtual = rotacaoAtual % 360;
-  const alvoFinalMod = (360 - anguloAlvo + 360) % 360;
-  const delta = (alvoFinalMod - offsetAtual + 360) % 360;
-  const anguloFinal = rotacaoAtual + voltasExtras * 360 + delta;
-
-  return anguloFinal;
+  const alvoMod = (360 - alvo + 360) % 360;
+  const delta = (alvoMod - offsetAtual + 360) % 360;
+  return rotacaoAtual + voltas * 360 + delta;
 }
