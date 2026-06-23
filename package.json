@@ -1,0 +1,13 @@
+{
+  "name": "roda-sabor-front",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Frontend SPA do Roda & Sabor — restaurante com gamificação",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
