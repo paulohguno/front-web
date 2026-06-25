@@ -1,9 +1,3 @@
-// =========================================================
-// RODA & SABOR — Frontend dev server (Node.js puro)
-// Rode: node server.js
-// Acesse: http://localhost:5173
-// =========================================================
-
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
@@ -26,9 +20,18 @@ const TIPOS_MIME = {
 };
 
 const servidor = http.createServer((req, res) => {
+  // Headers nativos para permitir conexão local
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    return res.end();
+  }
+
   let urlPath = req.url.split('?')[0];
 
-  // Se acessar "/", servir index.html
   if (urlPath === '/' || urlPath === '') {
     urlPath = '/index.html';
   }
@@ -38,31 +41,19 @@ const servidor = http.createServer((req, res) => {
 
   fs.readFile(caminhoArquivo, (err, dados) => {
     if (err) {
-      // Fallback SPA
       fs.readFile(path.join(__dirname, 'index.html'), (erroIndex, indexData) => {
         if (erroIndex) {
-          res.writeHead(404, {
-            'Content-Type': 'text/plain; charset=utf-8'
-          });
+          res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
           return res.end('Arquivo não encontrado');
         }
-
-        res.writeHead(200, {
-          'Content-Type': 'text/html; charset=utf-8'
-        });
-
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         res.end(indexData);
       });
-
       return;
     }
 
     const tipo = TIPOS_MIME[ext] || 'text/plain; charset=utf-8';
-
-    res.writeHead(200, {
-      'Content-Type': tipo
-    });
-
+    res.writeHead(200, { 'Content-Type': tipo });
     res.end(dados);
   });
 });
@@ -70,6 +61,5 @@ const servidor = http.createServer((req, res) => {
 servidor.listen(PORTA, () => {
   console.log(`\n🎡 Roda & Sabor Frontend`);
   console.log(`   Acesse: http://localhost:${PORTA}`);
-  console.log(`   API Backend: http://localhost:3333`);
   console.log('');
 });
