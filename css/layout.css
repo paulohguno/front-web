@@ -100,7 +100,7 @@ main { flex:1; }
   background:radial-gradient(circle,rgba(212,175,55,0.10),transparent 70%);
   top:-160px; right:-160px; pointer-events:none;
 }
-.auth-caixa { width:100%; max-width:400px; position:relative; z-index:1; }
+.auth-caixa { width:100%; max-width:500px; position:relative; z-index:1; }
 .auth-cabecalho { text-align:center; margin-bottom:var(--espaco-5); }
 .auth-cabecalho .eyebrow { display:block; margin-bottom:var(--espaco-2); }
 .auth-rodape-link {

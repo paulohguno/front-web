@@ -116,8 +116,17 @@
 
 .campo-linha {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--espaco-4);
+}
+
+.campo-linha .campo {
+  min-width: 0;
+}
+
+.campo-linha input {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 @media (max-width: 560px) {
