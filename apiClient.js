@@ -3,9 +3,9 @@
 // Camada única de comunicação com o backend Express.
 // =========================================================
 
-// Prioridade:
-//   1. window.RODA_SABOR_CONFIG.API_BASE_URL  → setado no index.html (via variável do Vercel)
-//   2. localhost:3333                          → desenvolvimento local
+// Prioridade de URL:
+//   1. window.RODA_SABOR_CONFIG.API_BASE_URL  → injetado no build do Vercel
+//   2. http://localhost:3333                   → desenvolvimento local
 const API_BASE_URL =
   window.RODA_SABOR_CONFIG?.API_BASE_URL ||
   'http://localhost:3333';
